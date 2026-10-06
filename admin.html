@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Админка промокодов</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}
+body{margin:0;background:#08070b;color:#f2f1f5;font-family:system-ui,-apple-system,sans-serif;padding:16px}
+main{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+h1{font-size:22px;margin:6px 0 0}h2{font-size:16px;margin:0}
+.card{background:#1a191e;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:10px}
+label{font-size:12.5px;color:#8b8795;font-weight:700;margin-bottom:-4px}
+input,select,textarea{width:100%;border-radius:14px;background:#26252b;border:1.5px solid #2c2a33;color:#fff;font:600 15px system-ui;padding:12px 14px;outline:none}
+textarea{font:12px ui-monospace,Menlo,monospace;min-height:90px;word-break:break-all}
+input:focus,select:focus,textarea:focus{border-color:#34d058}
+button{border:none;border-radius:24px;height:46px;font:800 15px system-ui;background:#34d058;color:#04210d;cursor:pointer}
+button.g{background:#2c2b31;color:#fff}button.r{background:#2c2b31;color:#fb7185}
+button:disabled{opacity:.5}
+.err{color:#fb7185;font-size:13px;min-height:16px}.note{color:#8b8795;font-size:13px;line-height:1.45}
+.code{font:12px ui-monospace,Menlo,monospace;word-break:break-all;color:#facc15}
+.row{display:flex;gap:8px}.row>*{flex:1}
+[hidden]{display:none!important}
+</style></head><body><main>
+<h1>🎟️ Админка промокодов</h1>
+
+<!-- 1. первый запуск -->
+<section class="card" id="setup" hidden>
+  <h2>Первый запуск: создай ключи</h2>
+  <p class="note">Создаётся пара ключей. Приватный ключ шифруется твоим паролем и хранится только в этом браузере. Публичный ключ ты вставишь в игру.</p>
+  <label>Пароль (от 8 символов)</label><input id="sPw" type="password" autocomplete="new-password">
+  <label>Повтори пароль</label><input id="sPw2" type="password" autocomplete="new-password">
+  <div class="err" id="sErr"></div>
+  <button id="sGo">Создать ключи</button>
+  <button class="g" id="sImp">Импортировать резервную копию</button>
+</section>
+
+<!-- 2. вход -->
+<section class="card" id="login" hidden>
+  <h2>Вход</h2>
+  <label>Пароль</label><input id="lPw" type="password" autocomplete="current-password">
+  <div class="err" id="lErr"></div>
+  <button id="lGo">Войти</button>
+</section>
+
+<!-- 3. панель -->
+<section id="panel" hidden style="display:flex;flex-direction:column;gap:12px">
+  <div class="card">
+    <h2>Новые промокоды</h2>
+    <div class="row" style="flex-wrap:wrap"><button class="g" data-m="r">💰 Награды</button><button class="g" data-m="b">🎖️ Батл Пасс</button><button class="g" data-m="i">🚗 Предметы</button><button class="g" data-m="t">⚡ Турбо</button></div>
+    <div id="m_r"><label>Награда</label><select id="gT"><option value="M">Деньги</option><option value="C">Контейнер</option></select>
+      <div id="gCw" hidden><label>Какой контейнер</label><select id="gC"></select></div>
+      <label id="gVL">Сумма, ₽</label><input id="gV" type="number" min="1" value="10000"></div>
+    <div id="m_t" hidden><p class="note" style="margin:0">Открывает игроку «Турбо-режим»: быстрые прокрутки рулетки и открытие кейсов. Выдаётся навсегда, значение вводить не нужно.</p></div>
+    <div id="m_b" hidden><label>Что выдать</label><select id="bT"><option value="L">Уровни Батл Пасса</option><option value="X">Опыт Батл Пасса (XP)</option><option value="P">Премиум-дорожка</option></select>
+      <div id="bVw"><label id="bVL">Сколько уровней (1–30)</label><input id="bV" type="number" min="1" value="1"></div></div>
+    <div id="m_i" hidden><label>Что выдать</label><select id="iT"><option value="car">Конкретную машину</option><option value="plate">Конкретный номер</option></select>
+      <div id="iCar"><label>Машина (редкость по её классу)</label><select id="iC"></select></div>
+      <div id="iPl" hidden><label>Буквы</label><div class="row"><select id="pL1"></select><select id="pL2"></select><select id="pL3"></select></div>
+        <label>Цифры (3 цифры)</label><input id="pD" maxlength="3" inputmode="numeric" value="777">
+        <label>Регион</label><select id="pR"></select><label>Редкость</label><select id="pT"></select></div></div>
+    <label>Срок действия, дней (0 — бессрочно)</label><input id="gE" type="number" min="0" value="0">
+    <label>Сколько кодов создать (каждый — отдельный, одноразовый)</label><input id="gN" type="number" min="1" max="50" value="1">
+    <label>Адрес игры (необязательно — тогда получишь ссылки)</label><input id="gU" placeholder="https://моя-игра.ру/index.html">
+    <div class="err" id="gErr"></div>
+    <button id="gGo">Создать</button>
+  </div>
+  <div class="card" id="outCard" hidden>
+    <h2>Готово</h2><div id="out" style="display:flex;flex-direction:column;gap:8px"></div>
+    <button class="g" id="copyAll">Копировать все</button>
+  </div>
+  <div class="card">
+    <h2>Публичный ключ для игры</h2>
+    <p class="note">Вставь в игру: <b>var PROMO_PUBKEY=</b> …</p>
+    <textarea id="pub" readonly></textarea>
+    <div class="row"><button class="g" id="cpPub">Копировать</button><button class="g" id="bak">Скачать резервную копию</button></div>
+    <button class="r" id="out2">Выйти</button>
+  </div>
+</section>
+<input type="file" id="file" accept="application/json" hidden>
+
+<p class="note">Если потерять пароль и резервную копию, новые коды выпустить нельзя — придётся создать новую пару ключей и заменить публичный ключ в игре (старые коды перестанут работать).</p>
+</main>
+<script>
+(function(){
+"use strict";
+var $=function(i){return document.getElementById(i);};
+var enc=new TextEncoder(),dec=new TextDecoder(),KEY='promo_admin_v1',store=null,signKey=null,lastCodes=[];
+var b64=function(u){return btoa(String.fromCharCode.apply(null,u));};
+var unb64=function(s){return Uint8Array.from(atob(s),function(c){return c.charCodeAt(0);});};
+var b64u=function(u){return b64(u).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');};
+var EC={name:'ECDSA',namedCurve:'P-256'};
+
+async function pwKey(pw,salt){
+  var k=await crypto.subtle.importKey('raw',enc.encode(pw),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt:salt,iterations:250000,hash:'SHA-256'},k,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function encJwk(jwk,pw){
+  var salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12)),key=await pwKey(pw,salt);
+  var ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,enc.encode(JSON.stringify(jwk))));
+  return {salt:b64(salt),iv:b64(iv),ct:b64(ct)};
+}
+async function decJwk(e,pw){
+  var key=await pwKey(pw,unb64(e.salt));
+  return JSON.parse(dec.decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(e.iv)},key,unb64(e.ct))));
+}
+function save(){ localStorage.setItem(KEY,JSON.stringify(store)); }
+function show(id){ ['setup','login','panel'].forEach(function(x){ $(x).hidden=(x!==id); }); }
+function init(){
+  if(!window.crypto||!crypto.subtle){ document.body.innerHTML='<p style="padding:20px">Нужен https или localhost: WebCrypto недоступен.</p>'; return; }
+  try{ store=JSON.parse(localStorage.getItem(KEY)||'null'); }catch(e){ store=null; }
+  show(store?'login':'setup');
+}
+
+$('sGo').onclick=async function(){
+  var p=$('sPw').value,err=$('sErr'); err.textContent='';
+  if(p.length<8){ err.textContent='Пароль — минимум 8 символов'; return; }
+  if(p!==$('sPw2').value){ err.textContent='Пароли не совпадают'; return; }
+  $('sGo').disabled=true;
+  try{
+    var kp=await crypto.subtle.generateKey(EC,true,['sign','verify']);
+    var priv=await crypto.subtle.exportKey('jwk',kp.privateKey),pub=await crypto.subtle.exportKey('jwk',kp.publicKey);
+    store={pub:{kty:pub.kty,crv:pub.crv,x:pub.x,y:pub.y},enc:await encJwk(priv,p)}; save();
+    await unlock(p);
+  }catch(e){ err.textContent='Ошибка: '+e.message; }
+  $('sGo').disabled=false;
+};
+async function unlock(pw){
+  var priv=await decJwk(store.enc,pw);
+  signKey=await crypto.subtle.importKey('jwk',priv,EC,false,['sign']);
+  $('pub').value=JSON.stringify(store.pub); show('panel');
+}
+$('lGo').onclick=async function(){
+  $('lErr').textContent=''; $('lGo').disabled=true;
+  try{ await unlock($('lPw').value); $('lPw').value=''; }catch(e){ $('lErr').textContent='Неверный пароль'; }
+  $('lGo').disabled=false;
+};
+$('lPw').addEventListener('keydown',function(e){ if(e.key==='Enter') $('lGo').click(); });
+$('out2').onclick=function(){ signKey=null; $('out').innerHTML=''; $('outCard').hidden=true; show('login'); };
+
+var CASE_LIST=["📦 Обычный контейнер", "📦 Редкий контейнер", "📦 Эпический контейнер", "📦 Легендарный контейнер", "🇯🇵 Токио-дрифт", "🇩🇪 Немецкое качество", "🇷🇺 Народный автопром", "🇺🇸 Американские мускулы", "⛰️ Внедорожники", "🛻 Пикапы и грузовики", "⚡ Электро-будущее", "🇨🇳 Китайский рывок", "🕰️ Ретро и классика", "🚓 Городские службы", "🕶️ Лихие 90-е", "🇮🇹 Итальянская страсть", "👑 Роскошь", "🏁 Суперкары", "🚀 Гиперкары", "🚙 Toyota и Lexus", "🔵 BMW", "⭐ Mercedes-Benz", "🐎 Porsche", "🏇 Ferrari", "🐂 Lamborghini", "⭕ Audi", "🇬🇧 Британская классика", "🇰🇷 Корейская волна", "🇫🇷 Французы и шведы", "🚘 Седаны", "🚗 Хэтчбеки", "🏎️ Спорткары", "🪙 Мелочёвка", "🧾 Средний класс", "🎃 Хэллоуин", "🎄 Новогодний", "🌷 8 Марта", "🎖️ 23 Февраля", "❄️ Зимний сезон", "🏆 Ралли и гонки", "🎟️ Лотерея", "🥇 Золотая жила", "🔮 Мифическая охота"];
+var CARS=["Lada 2107", "Lada Granta", "Lada Niva", "Daewoo Matiz", "Kia Rio", "Hyundai Solaris", "Skoda Octavia", "VW Polo", "Toyota Camry", "Mazda 6", "Ford Focus ST", "Subaru WRX", "BMW M3", "Audi RS6", "Mercedes E63", "Nissan GT-R", "Toyota Supra", "Porsche 911 GT3", "Lamborghini Huracán", "Ferrari F8", "Mercedes G63 AMG", "McLaren 720S", "Aston Martin DBS", "Bentley Continental", "Bugatti Chiron", "Koenigsegg Jesko", "Rolls-Royce Phantom", "Pagani Huayra", "Bugatti La Voiture Noire", "Ferrari 250 GTO", "Rolls-Royce Boat Tail", "Lykan HyperSport", "Toyota Corolla", "Nissan Almera", "Mazda MX-5", "Honda Civic", "Toyota AE86", "Honda Civic Type R", "Mitsubishi Lancer Evo X", "Mazda RX-7", "Toyota Land Cruiser 200", "Nissan Skyline R34", "Honda NSX", "Lexus LC 500", "Lexus LFA", "Nissan GT-R Nismo", "Toyota GR010 Hybrid", "Mazda 787B", "Opel Astra", "BMW 3 Series", "Audi A4", "VW Golf GTI", "Audi TT", "BMW M5", "Mercedes-AMG GT", "Porsche 918 Spyder", "Mercedes-Maybach S680", "Mercedes-AMG One", "Fiat 500", "Fiat Panda", "Lancia Delta Integrale", "Alfa Romeo Giulia", "Maserati Ghibli", "Alfa Romeo 8C", "Lamborghini Aventador", "Lamborghini Countach", "Ferrari LaFerrari", "Lada Vesta", "Lada Priora", "Москвич 412", "УАЗ Патриот", "ГАЗель", "ГАЗ-24 Волга", "ЗИЛ-130", "ГАЗ-21 Волга", "Lada Revolution", "Aurus Komendant", "Aurus Senat", "Pontiac Firebird", "Ford Mustang GT", "Chevrolet Camaro SS", "Dodge Charger R/T", "Dodge Challenger Hellcat", "Cadillac Escalade", "Chevrolet Corvette C8", "Dodge Viper ACR", "Shelby Cobra 427", "Ford GT", "Hennessey Venom F5", "Suzuki Jimny", "Jeep Wrangler", "Land Rover Defender", "Hummer H2", "Range Rover Sport", "Lexus LX 600", "Lamborghini Urus", "Bentley Bentayga", "Rolls-Royce Cullinan", "Mercedes G63 6x6", "Lada Largus Фургон", "Daewoo Labo", "Toyota Hilux", "УАЗ Пикап", "Ford F-150", "Chevrolet Silverado", "Ram 1500 TRX", "Rivian R1T", "Ford F-150 Raptor R", "Mercedes Unimog", "Rezvani Hercules 6x6", "Nissan Leaf", "Hyundai Ioniq 5", "Tesla Model 3", "Lucid Air Sapphire", "Tesla Model S Plaid", "Porsche Taycan Turbo S", "Tesla Cybertruck", "Tesla Roadster", "GMC Hummer EV", "Rimac Nevera", "Chery Tiggo 7", "Geely Coolray", "Haval Jolion", "Geely Monjaro", "BYD Han", "Hongqi H9", "Zeekr 001", "Nio ET7", "Xiaomi SU7 Ultra", "BYD Yangwang U9", "Hongqi L5", "Nio EP9", "Lada 2101 «Копейка»", "ЗАЗ-965 Запорожец", "VW Beetle", "Mini Cooper Classic", "Ford Model T", "Cadillac Eldorado 1959", "Porsche 356", "DeLorean DMC-12", "Jaguar E-Type", "Mercedes 300 SL Gullwing", "Rolls-Royce Silver Ghost", "Bugatti Type 57 Atlantic", "Lada Granta Такси", "Hyundai Solaris Такси", "УАЗ Патриот ДПС", "ГАЗель Скорая", "Ford Crown Victoria Police", "Chevrolet Tahoe Police", "BMW 5 Series ДПС", "Mercedes Sprinter Скорая", "BMW M5 Police", "Lamborghini Huracán Police", "Bugatti Veyron Dubai Police", "Aurus Senat Кортеж", "Lada 2109 «Девятка»", "Lada 2108 «Зубило»", "Opel Vectra", "BMW 525 E34 «Бумер»", "Jeep Grand Cherokee ZJ", "Toyota Land Cruiser 80", "BMW 750 E38 «Бумер»", "Mercedes S600 W140 «Кабан»", "Lexus LX 470", "Mercedes G500 «Гелик»", "Rolls-Royce Silver Spur", "Mercedes S600 Pullman", "Lexus LS 500", "Genesis G90", "Mercedes S-Class W223", "Audi A8", "BMW 7 Series", "Volvo V60", "Volvo XC90", "Volvo 240 Универсал", "Peugeot 206", "Peugeot 508", "Renault Logan", "Renault Sandero", "Renault Clio RS", "Citroen 2CV", "Skoda Octavia RS", "Skoda Superb", "Kia Stinger", "Kia EV6 GT", "Hyundai i30 N", "Genesis GV80", "Subaru Impreza 22B", "Subaru Forester", "Mini John Cooper Works", "Alpine A110", "Lotus Elise", "Lotus Evija", "McLaren P1", "McLaren Senna", "Aston Martin DB5", "Aston Martin Valkyrie", "Ferrari Enzo", "Ferrari SF90 Stradale", "Lamborghini Sian", "Koenigsegg Regera", "Porsche Cayenne", "Porsche Macan", "Porsche 911 Turbo S", "Bugatti Veyron", "Bugatti Bolide", "Pagani Zonda", "Mercedes SLR McLaren", "Mercedes 190E Evo", "BMW M1", "BMW i8", "BMW X5 M", "BMW M2", "Audi R8", "Audi Quattro S1", "Audi RS3", "VW Golf R", "VW Passat", "VW Touareg", "Toyota RAV4", "Toyota Prius", "Honda S2000", "Nissan 370Z", "Nissan Patrol", "Mazda CX-5", "Kia Sportage", "Hyundai Creta"],REG=["01 Адыгея", "02 Башкортостан", "03 Бурятия", "04 Алтай", "05 Дагестан", "06 Ингушетия", "07 Кабардино-Балкария", "08 Калмыкия", "09 Карачаево-Черкесия", "10 Карелия", "11 Коми", "12 Марий Эл", "13 Мордовия", "14 Саха (Якутия)", "15 Северная Осетия", "16 Татарстан", "17 Тыва", "18 Удмуртия", "19 Хакасия", "20 Чечня", "21 Чувашия", "22 Алтайский край", "23 Краснодарский край", "24 Красноярский край", "25 Приморский край", "26 Ставропольский край", "27 Хабаровский край", "28 Амурская область", "29 Архангельская область", "30 Астраханская область", "31 Белгородская область", "32 Брянская область", "33 Владимирская область", "34 Волгоградская область", "35 Вологодская область", "36 Воронежская область", "37 Ивановская область", "38 Иркутская область", "39 Калининградская область", "40 Калужская область", "41 Камчатский край", "42 Кемеровская область", "43 Кировская область", "44 Костромская область", "45 Курганская область", "46 Курская область", "47 Ленинградская область", "48 Липецкая область", "49 Магаданская область", "50 Московская область", "51 Мурманская область", "52 Нижегородская область", "53 Новгородская область", "54 Новосибирская область", "55 Омская область", "56 Оренбургская область", "57 Орловская область", "58 Пензенская область", "59 Пермский край", "60 Псковская область", "61 Ростовская область", "62 Рязанская область", "63 Самарская область", "64 Саратовская область", "65 Сахалинская область", "66 Свердловская область", "67 Смоленская область", "68 Тамбовская область", "69 Тверская область", "70 Томская область", "71 Тульская область", "72 Тюменская область", "73 Ульяновская область", "74 Челябинская область", "75 Забайкальский край", "76 Ярославская область", "77 Москва", "78 Санкт-Петербург", "79 Еврейская АО", "83 Ненецкий АО", "86 Ханты-Мансийский АО", "87 Чукотский АО", "89 Ямало-Ненецкий АО", "91 Крым", "92 Севастополь", "99 Москва"],LET=["А", "В", "Е", "К", "М", "Н", "О", "Р", "С", "Т", "У", "Х"],TIERS=["Обычный", "Необычный", "Редкий", "Эпический", "Легендарный", "Мифический", "Секретный", "Эксклюзивный", "Божественный", "Абсолютный"],mode='r';
+function fill(id,arr,f){ $(id).innerHTML=arr.map(function(x,i){ return '<option value="'+i+'">'+(f?f(x,i):x)+'</option>'; }).join(''); }
+fill('gC',CASE_LIST,function(n,i){return i+'. '+n;}); fill('iC',CARS,function(n,i){return n;}); fill('pR',REG); fill('pT',TIERS);
+['pL1','pL2','pL3'].forEach(function(id,k){ fill(id,LET); $(id).value=k===0?0:(k===1?0:0); });
+function setMode(m){ mode=m; ['r','b','i','t'].forEach(function(x){ $('m_'+x).hidden=x!==m; }); document.querySelectorAll('[data-m]').forEach(function(b){ b.style.outline=b.getAttribute('data-m')===m?'2px solid #34d058':'none'; }); }
+document.querySelectorAll('[data-m]').forEach(function(b){ b.onclick=function(){ setMode(b.getAttribute('data-m')); }; }); setMode('r');
+$('gT').onchange=function(){ var c=$('gT').value==='C'; $('gCw').hidden=!c; $('gVL').textContent=c?'Количество контейнеров':'Сумма, ₽'; $('gV').value=c?1:10000; };
+$('bT').onchange=function(){ var t=$('bT').value; $('bVw').hidden=t==='P'; $('bVL').textContent=t==='L'?'Сколько уровней (1–30)':'Сколько XP (100 XP = 1 уровень)'; $('bV').value=t==='L'?1:100; };
+$('iT').onchange=function(){ var p=$('iT').value==='plate'; $('iCar').hidden=p; $('iPl').hidden=!p; };
+async function makeCode(type,v,n,days){
+  var b=new Uint8Array(15),dv=new DataView(b.buffer);
+  b[0]=type; dv.setUint32(1,v); dv.setUint16(5,n); dv.setUint32(7,days>0?Math.floor(Date.now()/864e5)+days:0);
+  crypto.getRandomValues(b.subarray(11,15));
+  var sig=new Uint8Array(await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'},signKey,b));
+  var all=new Uint8Array(79); all.set(b); all.set(sig,15);
+  return 'PR-'+b64u(all);
+}
+
+$('gGo').onclick=async function(){
+  var d=Math.max(0,Math.floor(+$('gE').value||0)),cnt=Math.floor(+$('gN').value),err=$('gErr'),url=$('gU').value.trim(),type,val,n=0,label,v;
+  err.textContent='';
+  if(!(cnt>=1&&cnt<=50)){ err.textContent='Кодов от 1 до 50'; return; }
+  if(mode==='r'){ var t=$('gT').value; v=Math.floor(+$('gV').value);
+    if(t==='M'){ if(!(v>0&&v<=1e9)){ err.textContent='Сумма от 1 до 1 000 000 000'; return; } type=0; val=v; label=v.toLocaleString('ru-RU')+' ₽'; }
+    else{ if(!(v>0&&v<=100)){ err.textContent='Контейнеров от 1 до 100'; return; } type=1; val=+$('gC').value; n=v; label=CASE_LIST[val]+' ×'+v; } }
+  else if(mode==='b'){ var b=$('bT').value; v=Math.floor(+$('bV').value);
+    if(b==='P'){ type=2; val=0; label='✨ Премиум Батл Пасс'; }
+    else if(b==='L'){ if(!(v>=1&&v<=30)){ err.textContent='Уровней от 1 до 30'; return; } type=4; val=v; label='+'+v+' ур. Батл Пасса'; }
+    else{ if(!(v>=1&&v<=3000)){ err.textContent='XP от 1 до 3000'; return; } type=3; val=v; label='+'+v+' XP Батл Пасса'; } }
+  else if(mode==='t'){ type=7; val=0; label='⚡ Турбо-режим (навсегда)'; }
+  else if($('iT').value==='car'){ type=5; val=+$('iC').value; label='🚗 '+CARS[val]; }
+  else{ var ds=$('pD').value.trim(); if(!/^\d{3}$/.test(ds)){ err.textContent='Нужно ровно 3 цифры'; return; }
+    var l=[+$('pL1').value,+$('pL2').value,+$('pL3').value], r=+$('pR').value; type=6; n=+$('pT').value;
+    val=(((l[0]*12+l[1])*12+l[2])*1000+(+ds))*100+r;
+    label='🔢 '+LET[l[0]]+ds+LET[l[1]]+LET[l[2]]+' '+REG[r].split(' ')[0]+' · '+TIERS[n]; }
+  label+=d?' · '+d+' дн.':' · бессрочно';
+  lastCodes=[]; $('out').innerHTML='';
+  for(var i=0;i<cnt;i++){
+    var c=await makeCode(type,val,n,d), txt=url?url+(url.indexOf('?')>=0?'&':'?')+'promo='+c:c; lastCodes.push(txt);
+    var d1=document.createElement('div'); d1.innerHTML='<div class="note">'+label+'</div><div class="code"></div>';
+    d1.lastChild.textContent=txt;
+    var bt=document.createElement('button'); bt.className='g'; bt.textContent='Копировать'; bt.style.height='38px';
+    (function(tx){ bt.onclick=function(){ copy(tx); }; })(txt);
+    d1.appendChild(bt); $('out').appendChild(d1);
+  }
+  $('outCard').hidden=false;
+};
+function copy(t){ navigator.clipboard.writeText(t).then(function(){ },function(){ prompt('Скопируй вручную:',t); }); }
+$('copyAll').onclick=function(){ copy(lastCodes.join('\n')); };
+$('cpPub').onclick=function(){ copy($('pub').value); };
+$('bak').onclick=function(){
+  var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(store)],{type:'application/json'})); a.download='promo-admin-backup.json'; a.click();
+};
+$('sImp').onclick=function(){ $('file').click(); };
+$('file').onchange=function(){
+  var f=this.files[0]; if(!f) return;
+  f.text().then(function(t){ var o=JSON.parse(t); if(!o.pub||!o.enc) throw 0; store=o; save(); show('login'); }).catch(function(){ $('sErr').textContent='Файл не подходит'; });
+};
+init();
+})();
+</script></body></html>
