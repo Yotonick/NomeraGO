@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Рулетка Госномеров</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Manrope:wght@500;600;700;800&display=swap">
 <style>
 @property --accent{syntax:'<color>';inherits:true;initial-value:#9aa3ad}
@@ -528,7 +529,7 @@ input,textarea{-webkit-user-select:text;user-select:text;font-size:16px}
 <div class="scr" id="caseScr" hidden></div>
 
 <script>
-(function(){
+function __startGame(){
 "use strict";
 
 /* ================= SETTINGS ================= */
@@ -979,7 +980,7 @@ function load(){
   }catch(e){}
 }
 var noSave=false;
-function save(){ if(noSave) return; try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){} }
+function save(){ if(noSave||window.__cloudReload) return; try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){} if(window.__cloudQueue) window.__cloudQueue(); }
 
 /* ================= HELPERS ================= */
 function todayStr(d){ d=d||new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
@@ -1387,33 +1388,18 @@ function importCode(code){
   try{
     var s=JSON.parse(decodeURIComponent(escape(atob(code.slice(4)))));
     if(!s||typeof s!=='object'||typeof s.balance!=='number'||!Array.isArray(s.inventory)) return false;
-    noSave=true; localStorage.setItem(KEY,JSON.stringify(s));
+    noSave=true; localStorage.setItem(KEY,JSON.stringify(s)); if(window.__cloudMarkDirty) window.__cloudMarkDirty(true);
     return true;
   }catch(e){ return false; }
 }
 function openBackup(){
-  sheet('<h2>Резервная копия</h2>'+
-    '<p style="opacity:.75;font-size:13px;line-height:1.45;margin:0 0 10px">Прогресс хранится в браузере и пропадёт при очистке данных. Скопируй код и сохрани его в заметках или мессенджере — потом можно вернуть прогресс или перенести на другое устройство.</p>'+
-    '<button class="link-btn" id="bkCopy" style="margin:0 0 14px">Скопировать код сохранения</button>'+
-    '<textarea id="bkIn" placeholder="Вставь код сюда (PR1:…)" rows="3" style="width:100%;box-sizing:border-box;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:inherit;padding:8px;font-size:13px"></textarea>'+
-    '<button class="link-btn" id="bkLoad" style="margin-top:8px">Загрузить из кода</button>');
-  $('bkCopy').onclick=function(){
-    var code=exportCode(), ta=$('bkIn');
-    function fallback(){ ta.value=code; ta.select(); try{ document.execCommand('copy'); toast('Код скопирован'); }catch(e){ toast('Выдели и скопируй код вручную'); } }
-    if(navigator.clipboard&&navigator.clipboard.writeText){
-      navigator.clipboard.writeText(code).then(function(){ toast('Код скопирован'); },fallback);
-    } else fallback();
-  };
-  var armed=false, lb=$('bkLoad');
-  lb.onclick=function(){
-    var v=$('bkIn').value;
-    if(!armed){
-      if(v.replace(/\s+/g,'').indexOf('PR1:')!==0){ toast('Это не код сохранения'); return; }
-      armed=true; lb.textContent='Нажми ещё раз — текущий прогресс заменится'; setTimeout(function(){ armed=false; lb.textContent='Загрузить из кода'; },3500); return;
-    }
-    if(importCode(v)){ toast('Прогресс загружен'); setTimeout(function(){ location.reload(); },500); }
-    else toast('Код повреждён или неполный');
-  };
+  var s=sheet('<div style="text-align:center;font-size:54px;line-height:1;margin-top:6px;filter:drop-shadow(0 6px 18px rgba(52,208,88,.35))">☁️</div>'+
+    '<h2>Всё хранится на сервере</h2>'+
+    '<p class="d">Резервные копии и коды больше не нужны — твой прогресс надёжно сохраняется в облаке.</p>'+
+    '<div style="display:flex;gap:12px;align-items:flex-start;background:rgba(255,255,255,.04);border-radius:16px;padding:12px 14px"><div style="font-size:22px;line-height:1.1">📱</div><div style="text-align:left"><div style="font-weight:800;font-size:14.5px;margin-bottom:2px">На любом устройстве</div><div style="opacity:.7;font-size:13px;line-height:1.4">Зайди с телефона, планшета или компьютера — твой прогресс уже будет там.</div></div></div><div style="display:flex;gap:12px;align-items:flex-start;background:rgba(255,255,255,.04);border-radius:16px;padding:12px 14px"><div style="font-size:22px;line-height:1.1">🔄</div><div style="text-align:left"><div style="font-weight:800;font-size:14.5px;margin-bottom:2px">Всё сохраняется само</div><div style="opacity:.7;font-size:13px;line-height:1.4">Ничего копировать и переносить не нужно: данные синхронизируются автоматически.</div></div></div><div style="display:flex;gap:12px;align-items:flex-start;background:rgba(255,255,255,.04);border-radius:16px;padding:12px 14px"><div style="font-size:22px;line-height:1.1">🧹</div><div style="text-align:left"><div style="font-weight:800;font-size:14.5px;margin-bottom:2px">Не страшна очистка браузера</div><div style="opacity:.7;font-size:13px;line-height:1.4">Даже если очистить данные или переустановить приложение, прогресс не пропадёт.</div></div></div>'+
+    '<div style="text-align:center;color:var(--green);font-weight:700;font-size:13px;margin-top:2px">✓ Просто играй — мы позаботимся о сохранении</div>'+
+    '<button class="link-btn" id="bkOk" style="margin-top:4px">Понятно</button>');
+  $('bkOk').onclick=function(){ s.close(); };
 }
 
 function openLegend(){
@@ -1496,7 +1482,8 @@ function renderProfile(){
       '<button class="menu-i" id="mDaily"><span>🎁 Ежедневная награда</span><span>'+(dailyAvailable()?'забрать!':'🔥 '+effStreak())+' ›</span></button>'+
       '<button class="menu-i" id="mBP"><span>🎖️ Батл Пасс</span><span>'+(bpReady()?'награды!':'ур. '+bpLevel())+' ›</span></button>'+
       '<button class="menu-i" id="mGuide"><span>📖 Справка и бонусы</span><span>›</span></button>'+
-      '<button class="menu-i" id="mBackup"><span>💾 Резервная копия</span><span>›</span></button>'+
+      '<button class="menu-i" id="mCloud"><span>☁️ Облако</span><span>'+(window.__cloudInfo?window.__cloudInfo():'—')+'</span></button>'+
+      '<button class="menu-i" id="mBackup"><span>🛡️ Сохранение данных</span><span>на сервере ›</span></button>'+
       '<button class="menu-i" id="mSound"><span>'+(state.sound?'🔊':'🔇')+' Звук</span><span>'+(state.sound?'включён':'выключен')+'</span></button>'+
     '</div>';
   if(state.best){
@@ -1511,6 +1498,7 @@ function renderProfile(){
   $('mDaily').onclick=openDaily;
   $('mBP').onclick=openBP; $('mGuide').onclick=function(){ pview='guide'; renderProfile(); $('prof').scrollTop=0; };
   $('mBackup').onclick=openBackup;
+  $('mCloud').onclick=function(){ if(window.__cloudSyncNow) window.__cloudSyncNow().then(function(m){ toast(m); renderProfile(); }); };
   $('mSound').onclick=function(){ state.sound=!state.sound; save(); if(state.sound) SND.click(); renderProfile(); };
   var rb=$('resetBtn'), armed=false;
   rb.onclick=function(){
@@ -2195,7 +2183,7 @@ $('aucBtn').hidden=!AUCTION_ON; $('aucBtn').addEventListener('click',openAuction
 
 /* ================= v11: загрузочный экран ================= */
 (function(){ var b=document.getElementById('boot'); if(!b) return;
-  var t0=performance.now(), fr=document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve();
+  var t0=0, fr=document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve();
   Promise.race([fr,new Promise(function(r){ setTimeout(r,2500); })]).then(function(){
     setTimeout(function(){ b.classList.add('off'); setTimeout(function(){ b.remove(); },650); },Math.max(0,1950-(performance.now()-t0))); });
 })();
@@ -2524,6 +2512,154 @@ checkAch();
 var qp=null; try{ qp=new URLSearchParams(location.search).get('promo'); }catch(e){}
 if(qp){ setTimeout(function(){ redeem(qp).then(function(r){ if(r!=='ok') toast(r); try{ history.replaceState(null,'',location.pathname); }catch(e){} }); },800); }
 else if(dailyAvailable()&&!state.pending) setTimeout(openDaily,500);
+}
+</script>
+<script>
+/* ================= CLOUD SYNC (Cloudflare Worker) ================= */
+(function(){
+// ↓↓↓ ВСТАВЬ СЮДА АДРЕС СВОЕГО WORKER после деплоя (без / в конце) ↓↓↓
+var API_URL='https://plate-roulette-api.yotonick.workers.dev';
+// ↑↑↑
+var KEY='plate_roulette_v3', OLDKEY='plate_roulette_v2', MKEY='plate_cloud_meta';
+var tg=window.Telegram&&window.Telegram.WebApp;
+try{ if(tg){ tg.ready(); tg.expand(); if(tg.disableVerticalSwipes) tg.disableVerticalSwipes(); } }catch(e){}
+var initData=(tg&&tg.initData)||'';
+var uid=null; try{ uid=tg.initDataUnsafe.user.id; }catch(e){}
+var enabled=!!(initData&&uid&&API_URL.indexOf('ВАШ_')<0);
+var status=enabled?'подключение…':(initData?'адрес сервера не задан':'открой игру из Telegram');
+var meta=readMeta(), timer=0, inflight=false, seq=0, bootMsg='', started=false;
+
+function readMeta(){ try{ return JSON.parse(localStorage.getItem(MKEY))||{}; }catch(e){ return {}; } }
+function writeMeta(){ try{ localStorage.setItem(MKEY,JSON.stringify(meta)); }catch(e){} }
+function localState(){ try{ return JSON.parse(localStorage.getItem(KEY)||localStorage.getItem(OLDKEY)||'null'); }catch(e){ return null; } }
+function hasProgress(s){ return !!(s&&((s.spins||0)>0||(s.inventory&&s.inventory.length))); }
+function spinsOf(s){ return (s&&s.spins)||0; }
+
+async function api(method,body,ms,keepalive){
+  var ctl=new AbortController(), t=setTimeout(function(){ ctl.abort(); },ms||8000);
+  try{
+    var r=await fetch(API_URL+'/save',{method:method,body:body||undefined,signal:ctl.signal,keepalive:!!keepalive,
+      headers:{'Authorization':'tma '+initData,'Content-Type':'application/json'}});
+    var j=null; try{ j=await r.json(); }catch(e){}
+    return {status:r.status,json:j||{}};
+  }finally{ clearTimeout(t); }
+}
+
+function adoptServer(data,rev){
+  window.__cloudReload=true;               // game.save() больше не затрёт localStorage
+  clearTimeout(timer);
+  try{ localStorage.setItem(KEY,JSON.stringify(data)); }catch(e){}
+  meta={uid:uid,rev:rev,dirty:false}; writeMeta();
+}
+
+async function boot(){
+  if(!enabled) return;
+  var first=!meta.uid;
+  if(meta.uid&&meta.uid!==uid){            // на этом устройстве раньше играл другой аккаунт
+    try{ localStorage.removeItem(KEY); localStorage.removeItem(OLDKEY); }catch(e){}
+    meta={uid:uid,rev:0,dirty:false}; writeMeta(); first=true;
+  }
+  var r;
+  try{ r=await api('GET',null,5000); }catch(e){ status='нет связи с сервером'; return; }
+  if(r.status!==200){ status='ошибка сервера ('+r.status+')'; return; }
+  var sv=r.json, local=localState();
+  if(!sv.exists){
+    meta={uid:uid,rev:0,dirty:hasProgress(local)}; writeMeta();
+    if(meta.dirty) push();                 // первая загрузка существующего прогресса в облако
+    else status='синхронизировано';
+    return;
+  }
+  var take=false, doPush=false;
+  if(first){
+    if(!hasProgress(local)) take=true;
+    else if(spinsOf(local)>spinsOf(sv.data)) doPush=true; else take=true;
+  }else if(meta.force) doPush=true;
+  else if(meta.dirty){
+    if(sv.rev===meta.rev) doPush=true;
+    else if(spinsOf(local)>spinsOf(sv.data)) doPush=true; else take=true;
+  }else if(sv.rev>meta.rev) take=true;
+  else status='синхронизировано';
+  if(take){
+    try{ localStorage.setItem(KEY,JSON.stringify(sv.data)); }catch(e){}
+    meta={uid:uid,rev:sv.rev,dirty:false}; writeMeta();
+    bootMsg='☁️ Прогресс загружен из облака'; status='синхронизировано';
+  }else if(doPush){
+    meta={uid:uid,rev:sv.rev,dirty:true}; writeMeta(); push();
+  }
+}
+
+async function push(){
+  if(!enabled||inflight||window.__cloudReload) return;
+  var raw=localStorage.getItem(KEY); if(!raw) return;
+  var body, s=seq;
+  try{ body=JSON.stringify({data:JSON.parse(raw),rev:meta.rev||0}); }catch(e){ return; }
+  inflight=true; status='сохраняю…';
+  try{
+    var r=await api('PUT',body,8000,body.length<60000);
+    if(r.status===200){
+      meta.uid=uid; meta.rev=r.json.rev; meta.force=false;
+      if(seq===s) meta.dirty=false; else schedule(300);
+      writeMeta(); status='синхронизировано';
+    }else if(r.status===409){ resolveConflict(r.json); }
+    else status='ошибка сервера ('+r.status+')';
+  }catch(e){ status='нет связи — сохраню позже'; schedule(15000); }
+  inflight=false;
+}
+function resolveConflict(c){
+  var local=localState();
+  if(c.data&&spinsOf(c.data)>spinsOf(local)){
+    adoptServer(c.data,c.rev); status='загружено из облака';
+    showMsg('☁️ На другом устройстве прогресс ушёл вперёд — загружаю его'); setTimeout(function(){ location.reload(); },1500);
+  }else{ meta.rev=c.rev; meta.dirty=true; writeMeta(); schedule(100); }
+}
+function schedule(ms){ clearTimeout(timer); timer=setTimeout(push,ms); }
+function queue(){
+  if(!enabled||window.__cloudReload) return;
+  meta.uid=uid; meta.dirty=true; seq++; writeMeta(); schedule(3000);
+}
+async function refresh(){                    // вернулись в приложение: не появилось ли что-то новое с другого устройства
+  if(!enabled||meta.dirty||inflight||window.__cloudReload) return;
+  try{
+    var r=await api('GET',null,5000);
+    if(r.status===200&&r.json.exists&&r.json.rev>(meta.rev||0)&&!meta.dirty){
+      if(typeof spinning!=='undefined'&&spinning) return;
+      adoptServer(r.json.data,r.json.rev); status='загружено из облака';
+      showMsg('☁️ Загружен прогресс с другого устройства'); setTimeout(function(){ location.reload(); },1200);
+    }else if(r.status===200) status='синхронизировано';
+  }catch(e){}
+}
+function showMsg(t){
+  var c=document.getElementById('toasts'); if(!c) return;
+  var d=document.createElement('div'); d.className='toast'; d.textContent=t; c.appendChild(d); setTimeout(function(){ d.remove(); },3500);
+}
+
+window.__cloudQueue=queue;
+window.__cloudMarkDirty=function(force){ if(!enabled) return; meta.uid=uid; meta.dirty=true; meta.force=!!force; seq++; writeMeta(); };
+window.__cloudInfo=function(){ return status+(enabled?' · v'+(meta.rev||0):'')+' ›'; };
+window.__cloudSyncNow=async function(){
+  if(!enabled) return status==='открой игру из Telegram'?'Облако работает только внутри Telegram':'Не задан адрес сервера в index.html';
+  if(meta.dirty){ clearTimeout(timer); await push(); } else await refresh();
+  return '☁️ '+status;
+};
+
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden){ if(meta.dirty){ clearTimeout(timer); push(); } }
+  else refresh();
+});
+// Telegram (особенно десктоп) не всегда шлёт visibilitychange, поэтому проверяем сервер ещё и по таймеру/фокусу.
+window.addEventListener('focus',function(){ refresh(); });
+window.addEventListener('pageshow',function(){ refresh(); });
+window.addEventListener('online',function(){ if(meta.dirty) schedule(100); else refresh(); });
+try{ if(tg&&tg.onEvent){ tg.onEvent('activated',function(){ refresh(); }); tg.onEvent('deactivated',function(){ if(meta.dirty){ clearTimeout(timer); push(); } }); } }catch(e){}
+setInterval(function(){ if(!document.hidden) refresh(); },10000);
+window.addEventListener('pagehide',function(){ if(meta.dirty){ clearTimeout(timer); push(); } });
+
+function start(){
+  if(started) return; started=true;
+  __startGame();
+  if(bootMsg) setTimeout(function(){ showMsg(bootMsg); },1800);
+}
+boot().catch(function(){ status='ошибка синхронизации'; }).then(start);
 })();
 </script>
 <script>(function(){
