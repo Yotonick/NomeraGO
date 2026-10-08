@@ -44,10 +44,13 @@ button:disabled{opacity:.5}
 <section id="panel" hidden style="display:flex;flex-direction:column;gap:12px">
   <div class="card">
     <h2>Новые промокоды</h2>
-    <div class="row" style="flex-wrap:wrap"><button class="g" data-m="r">💰 Награды</button><button class="g" data-m="b">🎖️ Батл Пасс</button><button class="g" data-m="i">🚗 Предметы</button><button class="g" data-m="t">⚡ Турбо</button></div>
+    <div class="row" style="flex-wrap:wrap"><button class="g" data-m="r">💰 Награды</button><button class="g" data-m="b">🎖️ Батл Пасс</button><button class="g" data-m="i">🚗 Предметы</button><button class="g" data-m="t">⚡ Турбо</button><button class="g" data-m="v">✈️ Путешествия</button></div>
     <div id="m_r"><label>Награда</label><select id="gT"><option value="M">Деньги</option><option value="C">Контейнер</option></select>
       <div id="gCw" hidden><label>Какой контейнер</label><select id="gC"></select></div>
       <label id="gVL">Сумма, ₽</label><input id="gV" type="number" min="1" value="10000"></div>
+    <div id="m_v" hidden><label>Что сделать с текущей поездкой игрока</label><select id="vT"><option value="F">Завершить мгновенно</option><option value="H">Срезать время</option></select>
+      <div id="vVw" hidden><label>Сколько часов срезать (1–720)</label><input id="vV" type="number" min="1" value="6"></div>
+      <p class="note" style="margin:8px 0 0">Работает только пока игрок в пути. Если поездки нет, игра не активирует код и он не тратится.</p></div>
     <div id="m_t" hidden><p class="note" style="margin:0">Открывает игроку «Турбо-режим»: быстрые прокрутки рулетки и открытие кейсов. Выдаётся навсегда, значение вводить не нужно.</p></div>
     <div id="m_b" hidden><label>Что выдать</label><select id="bT"><option value="L">Уровни Батл Пасса</option><option value="X">Опыт Батл Пасса (XP)</option><option value="P">Премиум-дорожка</option></select>
       <div id="bVw"><label id="bVL">Сколько уровней (1–30)</label><input id="bV" type="number" min="1" value="1"></div></div>
@@ -140,10 +143,11 @@ var CARS=["Lada 2107", "Lada Granta", "Lada Niva", "Daewoo Matiz", "Kia Rio", "H
 function fill(id,arr,f){ $(id).innerHTML=arr.map(function(x,i){ return '<option value="'+i+'">'+(f?f(x,i):x)+'</option>'; }).join(''); }
 fill('gC',CASE_LIST,function(n,i){return i+'. '+n;}); fill('iC',CARS,function(n,i){return n;}); fill('pR',REG); fill('pT',TIERS);
 ['pL1','pL2','pL3'].forEach(function(id,k){ fill(id,LET); $(id).value=k===0?0:(k===1?0:0); });
-function setMode(m){ mode=m; ['r','b','i','t'].forEach(function(x){ $('m_'+x).hidden=x!==m; }); document.querySelectorAll('[data-m]').forEach(function(b){ b.style.outline=b.getAttribute('data-m')===m?'2px solid #34d058':'none'; }); }
+function setMode(m){ mode=m; ['r','b','i','t','v'].forEach(function(x){ $('m_'+x).hidden=x!==m; }); document.querySelectorAll('[data-m]').forEach(function(b){ b.style.outline=b.getAttribute('data-m')===m?'2px solid #34d058':'none'; }); }
 document.querySelectorAll('[data-m]').forEach(function(b){ b.onclick=function(){ setMode(b.getAttribute('data-m')); }; }); setMode('r');
 $('gT').onchange=function(){ var c=$('gT').value==='C'; $('gCw').hidden=!c; $('gVL').textContent=c?'Количество контейнеров':'Сумма, ₽'; $('gV').value=c?1:10000; };
 $('bT').onchange=function(){ var t=$('bT').value; $('bVw').hidden=t==='P'; $('bVL').textContent=t==='L'?'Сколько уровней (1–30)':'Сколько XP (100 XP = 1 уровень)'; $('bV').value=t==='L'?1:100; };
+$('vT').onchange=function(){ $('vVw').hidden=$('vT').value!=='H'; };
 $('iT').onchange=function(){ var p=$('iT').value==='plate'; $('iCar').hidden=p; $('iPl').hidden=!p; };
 async function makeCode(type,v,n,days){
   var b=new Uint8Array(15),dv=new DataView(b.buffer);
@@ -165,6 +169,8 @@ $('gGo').onclick=async function(){
     if(b==='P'){ type=2; val=0; label='✨ Премиум Батл Пасс'; }
     else if(b==='L'){ if(!(v>=1&&v<=30)){ err.textContent='Уровней от 1 до 30'; return; } type=4; val=v; label='+'+v+' ур. Батл Пасса'; }
     else{ if(!(v>=1&&v<=3000)){ err.textContent='XP от 1 до 3000'; return; } type=3; val=v; label='+'+v+' XP Батл Пасса'; } }
+  else if(mode==='v'){ type=8; if($('vT').value==='F'){ val=0; label='✈️ Мгновенно завершить поездку'; }
+    else{ v=Math.floor(+$('vV').value); if(!(v>=1&&v<=720)){ err.textContent='Часов от 1 до 720'; return; } val=v*60; label='✈️ Срезать поездку на '+v+' ч'; } }
   else if(mode==='t'){ type=7; val=0; label='⚡ Турбо-режим (навсегда)'; }
   else if($('iT').value==='car'){ type=5; val=+$('iC').value; label='🚗 '+CARS[val]; }
   else{ var ds=$('pD').value.trim(); if(!/^\d{3}$/.test(ds)){ err.textContent='Нужно ровно 3 цифры'; return; }
